@@ -76,7 +76,7 @@ class DataMng(object):
             list_of_files.append(files)
         return list_of_files 
     def GetFmriInput(mri_sets_dir, level, input_formant, events, event_id, event_ending):
-        list_of_files_all = DataMng.GetListOfFiles(mri_sets_dir, [input_formant['nifti_ext'], input_formant['confound_ext']], level)
+        list_of_files_all = DataMng.GetListOfFiles(mri_sets_dir, [input_formant['nifti_ext'], input_formant['confound_ext'],input_formant['txt_ext']], level)
         sets_of_files = []
         for list_of_files in list_of_files_all:
             #get NIFTI

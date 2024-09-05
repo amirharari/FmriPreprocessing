@@ -6,7 +6,6 @@ Created on Thu Aug 24 19:42:46 2023
 """
 import nibabel as nib
 import pandas as pd
-from nipype.interfaces import afni as afni
 from nilearn.maskers import NiftiLabelsMasker
 import numpy as np
 import json
@@ -42,7 +41,8 @@ class PrepTools(object):
         print(i, ',', name)
         return df, i
             
-    def Confound(full_confound_file, confounds, num_vol_to_remove, prep_params, updated_confound_file='', pysio_file = ''):
+    def Confound(full_confound_file, confounds, prep_params, num_vol_to_remove =0, updated_confound_file='',
+                 pysio_file=''):
         df = pd.read_table(full_confound_file).fillna(0).iloc[num_vol_to_remove: , :] #get rid of na and num_vol_to_remove first volumes
         if debug: print(df.shape)
         df, bad_vol = PrepTools.CreateFDOL(df, full_confound_file)
@@ -52,8 +52,6 @@ class PrepTools(object):
             motion_confounds = [name for name in columns_names if 'FD_motion_outlier' in name]
             other_confounds = list(set(columns_names).intersection(confounds))
             all_confounds = other_confounds + motion_confounds
-        else:
-            all_confounds = other_confounds
         if debug: print(all_confounds)
         conf_ = df[all_confounds]
         if pysio_file != '':   conf_ = PrepTools.AddPysio(conf_, pysio_file, num_vol_to_remove)
@@ -68,12 +66,6 @@ class PrepTools(object):
         nib.nifti1.save(img_sliced, img_sliced_path)"""
         return img_sliced   
 
-    def Despyke(nifti):
-        despike = afni.Despike()
-        despike.inputs.in_file = nifti
-        despike.cmdline
-        res = despike.run() 
-        return res
     def CreatTimeSeries(nifti_img, atlas, labels, standardize, smoothing_fwhm, detrend, low_pass, high_pass, t_r, confounds):
         masker = NiftiLabelsMasker(labels_img = atlas, labels = labels, standardize=standardize, 
                                         memory='nilearn_cache', verbose=0, 
@@ -94,6 +86,7 @@ class PrepTools(object):
         sets_of_files = DataMng.GetFmriInput(mri_sets_dir = prep_params.data_root, level = prep_params.LEVEL,
                                              input_formant =
                                              {'nifti_ext':prep_params.NIFTI_EXT, 'confound_ext':prep_params.CONF_EXT,
+                                             'txt_ext':prep_params.TXT_EXT,
                                               'NIFTI_exclude': prep_params.NIFTI_NAME_EXCLUDE,
                                               'NIFTI_include': prep_params.NIFTI_NAME_INCLUDE,
                                               'confound_exclude': prep_params.CONF_NAME_EXCLUDE,
@@ -119,8 +112,8 @@ class PrepTools(object):
         if set_of_files['CONFOUND'] == '':
             print('++++++++++++++Empty ', set_of_files['CONFOUND'])
             return None, True
-        conf_, bad_vol = PrepTools.Confound(full_confound_file = set_of_files['CONFOUND'], confounds = prep_params.CONFOUNDS,
-                                       num_vol_to_remove = prep_params.NUM_VOL_TO_REMOVE, prep_params = prep_params, pysio_file = '')
+        conf_, bad_vol = PrepTools.Confound(full_confound_file=set_of_files['CONFOUND'],
+                                            confounds=prep_params.CONFOUNDS, prep_params=prep_params, pysio_file='')
         with open(conf_log, "w") as fp:
             for conf in conf_.columns.values:
                 fp.write("%s\n" % conf)

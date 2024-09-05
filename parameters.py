@@ -22,7 +22,6 @@ ATLASES = {
                          'labels': 'Lausanne_463.txt', 'yeo': 'Lausanne_463.txt'},
         }
 DEBUG = True
-NUM_VOL_TO_REMOVE = 3
 
 # Preprocessing parameters
 STANDARTIZE = 'zscore'
@@ -43,7 +42,7 @@ class PrepParameters(object):
         self.set_case_specific_params(data, atlas)
 
     def GetPrepParam(self):
-        return self.STANDARTIZE, self.SMOOTHING_FWHM, self.DETREND, self.LOW_PASS, self.HIGH_PASS, self.T_R, self.NUM_VOL_TO_REMOVE
+        return  self.SMOOTHING_FWHM, self.DETREND, self.LOW_PASS, self.HIGH_PASS, self.T_R
 
     def GetGeneralParam(self):
         return self.DEBUG, self.RESULTS, self.changable_TR
@@ -59,24 +58,10 @@ class PrepParameters(object):
 
         #fMRI Data
         self.data_root = os.path.join(self.project_root, 'fmri_scans')
-        self.NUM_VOL_TO_REMOVE = NUM_VOL_TO_REMOVE
-        if data == 'PTSD':
-            self.changable_TR = True
-            self.T_R = None
-            self.NIFTI_EXT = 'nii'
-        elif data == 'KET_INJ':
-            self.changable_TR = False
-            self.T_R = 2.5
-            self.NIFTI_EXT = 'gz'
-        elif data == 'KET_PAIN':
-            self.changable_TR = False
-            self.T_R = 2.5
-            self.NIFTI_EXT = 'gz'
-            self.NUM_VOL_TO_REMOVE = 0
-        else:
-            print('Error test: unsupported data', data, atlas)
+        self.changable_TR = False
+        self.T_R = 1
+        self.NIFTI_EXT = 'gz'
         self.unified_param()
-    
 
     def unified_param(self):
         self.RESULTS = os.path.join(self.project_root, 'Results_' + self.atlas)
@@ -88,8 +73,9 @@ class PrepParameters(object):
             os.makedirs(self.LOG)
 
         self.CONF_EXT = 'tsv'
-        self.NIFTI_NAME_INCLUDE = []
-        self.CONF_NAME_INCLUDE = []
+        self.TXT_EXT = 'txt'
+        self.NIFTI_NAME_INCLUDE = ["cmrrmbepi2boldmb4ipat2memory_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold"]
+        self.CONF_NAME_INCLUDE = ["memory"]
         self.NIFTI_NAME_EXCLUDE = []
         self.CONF_NAME_EXCLUDE = []
         self.LEVEL = 0
