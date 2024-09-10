@@ -69,11 +69,11 @@ def get_narration_type_to_time_frames_mapping(audio_directory_path, txt_path):
             sound_file = line.split(": ", 1)[1].strip()
 
             # Map the sound file path to the appropriate enum
-            if 'Traumatic' in sound_file:
+            if 'traumatic' in sound_file.lower():
                 mapped_narration_type.append(NarrationType.TRAUMATIC)
-            elif 'Sad' in sound_file:
+            elif 'sad' in sound_file.lower():
                 mapped_narration_type.append(NarrationType.SAD)
-            elif 'Neutral' in sound_file:
+            elif 'neutral' in sound_file.lower():
                 mapped_narration_type.append(NarrationType.NEUTRAL)
             else:
                 raise ValueError(f"Invalid SoundFile format: {sound_file}")

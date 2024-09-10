@@ -1,25 +1,23 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Aug 24 18:17:09 2023
-
-@author: marko
-"""
-import os
-import json
 import glob
-from numpy import genfromtxt
-from nilearn.maskers import NiftiLabelsMasker
+import json
+import os
+import time
+from scipy import stats
+import numpy as np
+from datetime import datetime
+import nibabel as nib
+import numpy as np
 from nilearn import image
+from nilearn.maskers import NiftiLabelsMasker
+from numpy import genfromtxt
+from scipy import stats
+import pandas as pd
+from Dicom import NarrationType
+from Dicom import get_narration_type_to_time_frames_mapping
 from data_manager import DataMng
 from parameters import PrepParameters
 from preprocessing_tools import PrepTools
 from visualizer import Visualizer as vs
-from scipy.stats import ttest_rel
-import numpy as np
-import nibabel as nib
-from Dicom import NarrationType
-from Dicom import get_narration_type_to_time_frames_mapping
-from datetime import datetime
 
 # Preprocessing parameters
 STANDARTIZE = 'zscore'
@@ -31,7 +29,7 @@ LOW_PASS = 0.08
 # Project-specific settings
 test = 'KET_INJ'
 atlas = 'Schaefer2018_7Networks'
-project_root = r'C:\ketamine-project'
+project_root = r'D:\amir_shared_folder\FMRI-PREP - Copy'
 audio_directory = r'C:\sound-path'
 
 # Function to convert time frames from milliseconds to slice indices
@@ -49,6 +47,11 @@ def create_output_dir(base_dir, file_name):
 # Function to save masker output and metadata
 def save_masker_output(output_data, output_dir, atlas_name, confounds):
     np.save(os.path.join(output_dir, "masker_output.npy"), output_data)
+
+    # Convert confounds DataFrame to dictionary or list if it's a DataFrame
+    if isinstance(confounds, pd.DataFrame):
+        confounds = confounds.to_dict(orient='list')  # You can choose 'records' or 'index' based on your needs
+
     with open(os.path.join(output_dir, "metadata.txt"), "w") as meta_file:
         meta_file.write(f"Atlas: {atlas_name}\n")
         meta_file.write(f"Confounds: {json.dumps(confounds)}\n")
@@ -130,8 +133,13 @@ if __name__ == '__main__':
 
         sets_of_files = [file_set for file_set in sets_of_files if file_set]
 
+        # Loop over all sets of files
         for set_of_files_i in range(len(sets_of_files)):
             set_of_files = sets_of_files[set_of_files_i]
+            print(set_of_files)
+
+            # Start time for the stopwatch
+            start_time = time.time()
 
             nifti_file_path = set_of_files['NIFTI']
             folder_path = os.path.dirname(nifti_file_path)
@@ -211,7 +219,48 @@ if __name__ == '__main__':
                     ylabel='zscore'
                 )
 
-    else:
-        print("Using loaded masker output for further analysis.")
+            # End time for the stopwatch
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print(f"Processing time for {set_of_files['NIFTI']}: {elapsed_time:.2f} seconds")
 
-    #
+
+        # Identify the amygdala labels
+        amygdala_labels = ['lAMY-rh', 'mAMY-rh', 'lAMY-lh', 'mAMY-lh']
+
+        # Initialize dictionaries to store the p-values and t-statistics for all regions
+        p_values = {}
+        t_statistics = {}
+
+        # Loop through all regions and compute the t-tests
+        for label, differences in all_reactivity_differences.items():
+            differences_array = np.array(differences)
+
+            # Perform paired t-test for all regions (amygdala and non-amygdala)
+            t_stat, p_value = stats.ttest_1samp(differences_array, 0)  # Null hypothesis mean = 0
+
+            # Store the results
+            t_statistics[label] = t_stat
+            p_values[label] = p_value
+
+            # Print the result for amygdala regions immediately (since no correction is needed)
+            if label in amygdala_labels:
+                print(f"Amygdala region {label}: t-statistic = {t_stat:.2f}, p-value = {p_value:.5f}")
+
+        # Perform Bonferroni correction for non-amygdala regions
+        alpha = 0.05
+        other_regions = [label for label in p_values if label not in amygdala_labels]
+        n_tests = len(other_regions)
+        bonferroni_threshold = alpha / n_tests
+
+        # Find significant regions after Bonferroni correction
+        significant_results = {label: p for label, p in p_values.items() if
+                               label in other_regions and p < bonferroni_threshold}
+
+        # Print results for non-amygdala regions
+        if significant_results:
+            print("Significant reactivity differences found in the following regions after Bonferroni correction:")
+            for region, p_val in significant_results.items():
+                print(f"Region: {region}, p-value: {p_val:.5f}, t-statistic: {t_statistics[region]:.2f}")
+        else:
+            print("No significant differences found after Bonferroni correction.")
